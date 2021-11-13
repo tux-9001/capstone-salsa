@@ -1,0 +1,2 @@
+Check 1: Not running as root
+Check 1: Not running as root
