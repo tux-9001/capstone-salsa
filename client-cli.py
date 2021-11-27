@@ -1,7 +1,7 @@
 run = True
 import subprocess
-
-
+import os
+import socket
 
 
 class lobj:
@@ -15,50 +15,52 @@ class lobj:
         # Use desc value to describe why this score applies
         # The "dss" variable exists to make PCI-DSS compliance auditing easier- sysadmins should be able to use this to audit dss compliance
 
+
 # PLEASE RUN THIS FROM TERMINAL, NOT PYCHARM!
-# PYCHARM DOES *NOT* PROVIDE TERMINAL ACCESS!
+# PYCHARM DOES *NOT* PROVIDE SUDO ACCESS!
 def finalize(array):
-    #compiles a report
+    # compiles a report
+    filename = ""
+    ovwr = ""
+    checkls = subprocess.run(['ls'], capture_output=True, shell=True)
+    checklsstr = checkls.stdout.decode("utf-8")
+    frun = True
+    while frun:
+        filename = input("Please enter a name for the logfile\n")
+        if filename in checklsstr:
+            ovwr = input("Warn: a file appears to exist under this name. Overwrite?")
+        if ovwr == "y":
+            log = open(filename, 'w')
+            frun = False
+        if filename not in checklsstr:
+            log = open(filename, 'w')
+            frun = False
+    fsc = 0
+    dscTotal = 0
+    # Code below writes final score in
+    for lobj in array:
+        fsc += lobj.score
+        dscTotal += lobj.dss
+        log.write(lobj.desc)
+        log.write(" ")
+        log.write(str(lobj.id))
+        log.write(" ")
+        log.write(str(lobj.dss))
+        log.write(" ")
+        log.write(str(lobj.score))
+        log.write("\n")
+        print("Total score is", fsc)
+        print("PCI-DSS score is:", dscTotal)
+
+    log = open(filename, 'w')
 
 
-        filename=""
-        ovwr=""
-        checkls=subprocess.run(['ls'],capture_output=True,shell=True)
-        checklsstr=checkls.stdout.decode("utf-8")
-        frun=True
-        while frun:
-            filename=input("Please enter a name for the logfile\n")
-            if filename in checklsstr:
-                ovwr=input ("Warn: a file appears to exist under this name. Overwrite?")
-            if ovwr == "y":
-                log = open(filename, 'w')
-                frun=False
-            if filename not in checklsstr:
-                log = open(filename, 'w')
-                frun=False
-        for lobj in array:
-            print (lobj.desc)
-            print (lobj.id)
-            print (lobj.dss)
-            print (lobj.score)
-                #TODO: Finish building this
-            log.write(lobj.desc)
-            log.write(" ")
-            log.write(str(lobj.id))
-            log.write(" ")
-            log.write(str(lobj.dss))
-            log.write(" ")
-            log.write(str(lobj.score))
-            log.write("\n")
-
-
-        log = open(filename, 'w')
 ll = []
+
 
 def CheckSecurity():
     finalscore = 0
-
-
+#TODO: get checks working for different distros
     # whoami = subprocess.run(["whoami"], stdout=subprocess.PIPE, universal_newlines=True)
     # user = str(whoami.stdout)
     # This ^ is the wrong way to get command output. leaving it for reference
@@ -110,6 +112,7 @@ def CheckSecurity():
         sslcheckstr = ("ssl_tlsv1=YES")
         nofilestr = ("No")
         print(vssec)
+        # TODO: automatically check other ftp services for security
         if sslcheckstr not in vssec:
             print("Warning: FTP service is running in cleartext mode")
             ll.append(lobj("FTP on and insecure", -10, 1, 3))
@@ -142,9 +145,10 @@ while run:
     print("Welcome to salsa , an open-source security analysis program")
     print("Please run this as a normal user! It's necessary in order to get correct results for some tests")
     mv = input(
-        "Type 'network' or 'n' to connect to a server, 's'/'scan' to check this system for security holes, or 'x' to exit.")
+        "Type 'network' or 'n' to connect to a server, 's'/'scan' to check this system for security holes, or 'x' to exit.\n")
     print(mv)
     if mv == ("s") or mv == ("scan"):
+        ll.clear()
         CheckSecurity()
         finalize(ll)
     if mv == ("n") or mv == ("network"):
