@@ -1,0 +1,8 @@
+"PRETTY_NAME="Fedora 34 (Workstation Edition)"" 0 0 0
+"No root login with password over SSH" 10 0 1
+"No SSH server" 10 0 1
+"Success- SELinux enforcing" 10 0 2
+"FTP off" 0 1 4
+"nftables firewall enabled. Check cfg" 10 1 5
+"Warning: not up to date (dnf/fedora)" 0 1 6
+Security item format: description, check ID, DSS score, and score.

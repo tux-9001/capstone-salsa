@@ -1,6 +1,8 @@
+import time
+
 run = True
+configfile = open("clientconfig", "r")
 import subprocess
-import os
 import socket
 def GetNumber(string):
     #This returns a single int from a string
@@ -44,11 +46,12 @@ def finalize(array):
             frun = False
     fsc = 0
     dscTotal = 0
+    dssSc= 0
     # Code below writes log items into log. Ensure you strip newline chars if applicable.
     for lobj in array:
         fsc += lobj.score
         dscTotal += lobj.dss
-        log.write(lobj.desc)
+        log.write('"'+lobj.desc+'"')
         log.write(" ")
         log.write(str(lobj.score))
         log.write(" ")
@@ -56,16 +59,35 @@ def finalize(array):
         log.write(" ")
         log.write(str(lobj.id))
         log.write("\n")
+        if lobj.score > 0 and lobj.dss == 1:
+            dssSc += lobj.score
     print("Total score is", fsc)
-    print("PCI-DSS score is:", dscTotal)
+    print("PCI-DSS score is:", dssSc)
     log.write("Security item format: description, check ID, DSS score, and score.")
 
     log = open(filename, 'w')
+def FileParser9000():
+    class cfgVal():
+        def __init__(self, type, value):
+            self.type = type
+            self.value = value
+    returnlist=[]
+    #This parses the config file for data and returns a list of configuration data
+    parse=True
 
+    while parse:
+        for line in configfile:
+            v = line.split()
+
+            returnlist.append(cfgVal(v[0], v[1]))
+            if line == "":
+                parse=False
+
+        return returnlist
 
 ll = []
-
-
+def TransmitData():
+    print ("a")
 def CheckSecurity():
     finalscore = 0
 #to  do resolved. checks work for diff distros without issue.
@@ -192,8 +214,6 @@ def CheckSecurity():
         else:
             print("Warning: no firewall detected! This is a major security risk")
             ll.append(lobj("Warning: no firewall", 0, 1, 5))
-#checking for ubuntu updates: cmd sudo cat /var/lib/update-notifier/updates-available may work
-#need a system that isnt already up to date tho
     print(checkDistroNameStrL)
     strFedora=("Fedora")
     strCentOS=("CentOS")
@@ -237,7 +257,7 @@ def CheckSecurity():
             print("Security patches are current. (apt/ubuntu)")
             ll.append(lobj("Up to date. (apt/ubuntu)", 10, 1, 6))
     if strRHEL in checkDistroNameStrL:
-        rhelchk=subprocess.run(['sudo yum --security | grep rpm'],shell=True,capture_output=True)
+        rhelchk=subprocess.run(['sudo yum --security | grep rpm'],shell=True, capture_output=True)
         rhelchkstr=rhelchk.stdout.decode('utf-8')
         strRPM=("rpm")
         if strRPM in rhelchkstr:
@@ -264,7 +284,45 @@ while run:
         CheckSecurity()
         finalize(ll)
     if mv == ("n") or mv == ("network"):
-        print("Not implemented yet!")
-        # TODO: Networking code for connection to server
+        print("Sending security items to the server...")
+        confl=FileParser9000()
+        print (confl)
+        debug=''
+        host=0
+        port=0
+        for item in confl:
+            print(item.type,item.value)
+            if item.type == "HOST":
+                host = item.value
+            if item.type == "PORT":
+                port = int(item.value)
+            if item.type == "DEBUG":
+                debug = int(item.value)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(('127.0.0.1', 9848))
+        r = s.recv(1024).decode('utf-8')
+        received = r.split()
+        print(r)
+        for object in ll:
+            hn=subprocess.run(['hostname'],capture_output=True,shell=True)
+            hnstr=hn.stdout.decode('utf-8')
+            s.send(('<HOST>'+hnstr).encode())
+            time.sleep(.5)
+            s.send(('<ID>'+str(object.id)).encode())
+            time.sleep(.5)
+            s.send(('<DESC>'+object.desc).encode())
+            time.sleep(.5)
+            s.send(('<DSS>'+str(object.dss)).encode())
+            time.sleep(.5)
+            s.send(('<SCORE>'+str(object.score)).encode())
+            time.sleep(.5)
+            s.send('<END>'.encode())
+
+        print ("sent")
+        s.send("b!EXIT!b".encode())
+        s.close()
+
+
+
     if mv == ("exit") or mv == ("x"):
         run = False
